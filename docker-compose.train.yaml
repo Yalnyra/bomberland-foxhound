@@ -1,0 +1,53 @@
+version: "3"
+
+services:
+    agent-ppo-training:
+        extends:
+            file: docker-compose.templates.yaml
+            service: agent-ppo-train
+        environment:
+            - FWD_MODEL_CONNECTION_STRING=ws://gym:6969/?role=admin
+        depends_on:
+            - gym
+        networks:
+            - competition-net-train
+
+    agent-dqn-training:
+        extends:
+            file: docker-compose.templates.yaml
+            service: agent-dqn-train
+        environment:
+            - FWD_MODEL_CONNECTION_STRING=ws://gym:6969/?role=admin
+        depends_on:
+            - gym
+        networks:
+            - competition-net-train
+
+    gym:
+        build:
+            context: engine
+            dockerfile: bomberland-engine/Dockerfile.dev
+        volumes:
+            - ./engine/bomberland-engine:/app/bomberland-engine
+            - ./engine/bomberland-library:/app/bomberland-library
+            - bomberland-engine_node_modules:/app/bomberland-engine/node_modules
+            - bomberland-engine_output:/app/bomberland-engine/dist
+        ports:
+            - 6969:6969
+        environment:
+            - TELEMETRY_ENABLED=1
+            - TRAINING_MODE_ENABLED=1
+            - PORT=6969
+            - WORLD_SEED=1234
+            - PRNG_SEED=1234
+            - ENVIRONMENT=production
+            - BUILD=production
+        networks:
+            - competition-net-train
+
+volumes:
+    bomberland-engine_node_modules:
+    bomberland-engine_output:
+
+networks:
+    competition-net-train:

@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+    game-engine:
+        extends:
+            file: docker-compose.templates.yaml
+            service: game-engine
+        ports:
+            - 3000:3000
+        environment:
+            - ADMIN_ROLE_ENABLED=0
+            - AGENT_ID_MAPPING=agentA,agentB
+            - INITIAL_HP=3
+            - PRNG_SEED=1234
+            - SHUTDOWN_ON_GAME_END_ENABLED=1
+            - TELEMETRY_ENABLED=1
+            - TICK_RATE_HZ=10
+            - TRAINING_MODE_ENABLED=0
+            - WORLD_SEED=1234
+        deploy:
+            resources:
+                limits:
+                    cpus: "1"
+                    memory: "1024M"
+        networks:
+            - competition-net-test
+
+    agent-a:
+        extends:
+            file: docker-compose.templates.yaml
+            # update next line with a service in base-compose.yml to change agent
+            service: agent-ppo-test
+        environment:
+            - GAME_CONNECTION_STRING=ws://game-engine:3000/?role=agent&agentId=agentA&name=agent-ppo
+        depends_on:
+            - game-engine
+        deploy:
+            resources:
+                limits:
+                    cpus: "1"
+                    memory: "1024M"
+        networks:
+            - competition-net-test
+
+    agent-b:
+        extends:
+            file: docker-compose.templates.yaml
+            # update next line with a service in base-compose.yml to change agent
+            service: agent-random-test
+        environment:
+            - GAME_CONNECTION_STRING=ws://game-engine:3000/?role=agent&agentId=agentB&name=agent-random
+        depends_on:
+            - game-engine
+        deploy:
+            resources:
+                limits:
+                    cpus: "1"
+                    memory: "1024M"
+        networks:
+            - competition-net-test
+
+networks:
+    competition-net-test:

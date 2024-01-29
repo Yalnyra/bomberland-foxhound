@@ -1,0 +1,44 @@
+version: "3"
+
+services:
+    game-engine:
+        image: coderone.azurecr.io/bomberland-engine:2381
+        volumes:
+            - type: "bind"
+              source: ./bomberman/replay.json
+              target: /app/replay.json
+
+    agent-random-test:
+        build:
+            context: bomberman
+            dockerfile: Dockerfile.random_test
+        volumes:
+            - ./bomberman:/app
+
+    agent-dqn-train:
+        build:
+            context: bomberman
+            dockerfile: Dockerfile.dqn_train
+        volumes:
+            - ./bomberman:/app
+
+    agent-dqn-test:
+        build:
+            context: bomberman
+            dockerfile: Dockerfile.dqn_test
+        volumes:
+            - ./bomberman:/app
+
+    agent-ppo-train:
+        build:
+            context: bomberman
+            dockerfile: Dockerfile.ppo_train
+        volumes:
+            - ./bomberman:/app
+
+    agent-ppo-test:
+        build:
+            context: bomberman
+            dockerfile: Dockerfile.ppo_test
+        volumes:
+            - ./bomberman:/app

@@ -1,0 +1,5 @@
+asyncio==3.4.3
+numpy==1.24.4
+-f https://download.pytorch.org/whl/torch_stable.html
+torch==2.1.2+cpu 
+websockets==10.1

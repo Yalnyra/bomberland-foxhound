@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+    bomberland-engine:
+        build:
+            context: .
+            dockerfile: ./bomberland-engine/Dockerfile.dev
+        volumes:
+            - ./bomberland-engine:/app/bomberland-engine
+            - ./bomberland-library:/app/bomberland-library
+            - bomberland-engine_node_modules:/app/bomberland-engine/node_modules
+            - bomberland-engine_output:/app/bomberland-engine/dist
+        ports:
+            - 6969:6969
+        environment:
+            - TELEMETRY_ENABLED=1
+            - TRAINING_MODE_ENABLED=1
+            - PORT=6969
+            - WORLD_SEED=1234
+            - PRNG_SEED=1234
+            - ENVIRONMENT=production
+            - BUILD=production
+
+volumes:
+    bomberland-engine_node_modules:
+    bomberland-engine_output:
