@@ -38,8 +38,8 @@ services:
             - TELEMETRY_ENABLED=1
             - TRAINING_MODE_ENABLED=1
             - PORT=6969
-            - WORLD_SEED=1234
-            - PRNG_SEED=1234
+           # - WORLD_SEED=9999
+           # - PRNG_SEED=9999
             - ENVIRONMENT=production
             - BUILD=production
         networks:
