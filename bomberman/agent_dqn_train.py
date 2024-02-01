@@ -37,7 +37,7 @@ UNITS = ["c", "d", "e", "f", "g", "h"]
 Hyperparameters
 """
 
-EPOCHS = 5
+EPOCHS = 50
 STEPS = 1000
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0003

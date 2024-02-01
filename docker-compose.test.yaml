@@ -12,7 +12,7 @@ services:
             - AGENT_ID_MAPPING=agentA,agentB
             - INITIAL_HP=3
             # - PRNG_SEED=1234
-            - SHUTDOWN_ON_GAME_END_ENABLED=1
+            - SHUTDOWN_ON_GAME_END_ENABLED=0
             - TELEMETRY_ENABLED=1
             - TICK_RATE_HZ=2
             - TRAINING_MODE_ENABLED=0
