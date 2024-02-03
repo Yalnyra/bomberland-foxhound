@@ -1,6 +1,6 @@
 import numpy as np
 import components.utils.observation as utils
-from components.utils.metrics import manhattan_distance
+from components.utils.metrics import manhattan_distance, broadcasting_distance
 from components.types import Observation
 
 def observation_from_state(state, my_unit_id):
@@ -28,15 +28,16 @@ def observation_from_state(state, my_unit_id):
         for unit_id in agent2units[agent]:
             unit = unit_state[unit_id]
             cux, cuy = unit['coordinates']
-            tmp[cuy, cux, 0] = 1.0
+            tmp[cuy, cux, 0] = 0.5
             tmp[cuy, cux, 1] = float(max(0, unit['hp']))
-            tmp[cuy, cux, 2] = float(max(0, unit['invulnerability'] - tick)) / 6.0
-            tmp[cuy, cux, 3] = min(float(unit['inventory']['bombs']), 7)
+            tmp[cuy, cux, 2] = float(max(0, unit['invulnerable'] - tick)) / 6.0
+            #tmp[cuy, cux, 3] = min(float(unit['inventory']['bombs']), 7)
+            tmp[cuy, cux, 3] = float(max(0, unit['stunned'] - tick)) / 6.0
             tmp[cuy, cux, 4] = min(float(unit['blast_diameter']) / 3.0, 7)
         layers.append((f'agent {agent} positions', tmp[:, :, 0], '01.0f'))
         layers.append((f'agent {agent} HP', tmp[:, :, 1], '01.0f'))
         layers.append((f'agent {agent} invulnerability', tmp[:, :, 2], '3.1f'))
-        layers.append((f'agent {agent} bombs', tmp[:, :, 3], '01.0f'))
+        layers.append((f'agent {agent} stun', tmp[:, :, 3], '01.0f'))
         layers.append((f'agent {agent} blast_diameter', tmp[:, :, 4], '01.0f'))
 
     # draw the environment HP and fire expiration times into a map
@@ -54,16 +55,26 @@ def observation_from_state(state, my_unit_id):
     layers.append(('environment HP 3', np.float32(tiles == 3), '01.0f'))
     layers.append(('environment HP 99', np.float32(tiles == 99), '01.0f'))
 
+    # Endgame fire
     fire_time = np.maximum(np.float32(tiles) - 100, np.zeros_like(tiles)) / 100.0
     layers.append(('fire time', np.float32(fire_time), '3.1f'))
 
-    # draw bomb, ammo, and powerup positions
-    for type in ['b', 'a', 'bp']:
+    # draw powerup positions
+    for type in ['bp', 'fp']:
         layer = np.zeros([15, 15], np.float32)
         for e in entities:
             if e['type'] != type: continue
             layer[e['y'], e['x']] = 1.0
         layers.append((f'entity {type} pos', layer, '01.0f'))
+
+    # draw bomb ranges
+    layer = np.zeros([15, 15], np.float32)
+    for e in entities:
+        if e['type'] != 'b': continue
+        y, x = e['y'], e['x']
+    # Find all tiles with smaller distances from bombs than their blast ranges
+        layer = np.float32(broadcasting_distance([y, x], layer) < unit_state[e['owner_unit_id']]['blast_diameter'])
+    layers.append((f'entity {type} pos', layer, '01.0f'))
 
     # how long will that bomb or fire still remain?
     for type in ['b', 'x']:
