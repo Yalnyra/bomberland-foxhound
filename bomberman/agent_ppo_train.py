@@ -30,20 +30,20 @@ UNITS = ["c", "d", "e", "f", "g", "h"]
 Hyperparameters
 """
 
-EPOCHS = 1000
-STEPS = 1000
+EPOCHS = 500
+STEPS = 10000
 BATCH_SIZE = 128
 LEARNING_RATE_ACTOR = 0.0003
 LEARNING_RATE_CRITIC = 0.001
-K_EPOCHS = 50 # update policy for K epochs in one PPO update
+K_EPOCHS = 80  # update policy for K epochs in one PPO update
 GAMMA = 0.99
 TAU = 0.005
-EPS_CLIP = 0.2 # clip parameter for PPO
+EPS_CLIP = 0.2  # clip parameter for PPO
 ACTION_STD = 0.6
 HAS_CONTINUOUS_ACTION_SPACE = False
 PRINT_EVERY = 100
 UPDATE_EVERY = 100
-SAVE_EVERY = 200
+SAVE_EVERY = 10000
 
 """
 Epsilon-greedy action selection.
@@ -63,10 +63,12 @@ def select_action(agent: PPO, state: State, steps_done: int, verbose: bool = Tru
 
 async def train(env: GymEnv, agent: PPO):
     cumulative_rewards = []
+    survival_times = []  # Додавання для збору інформації про час виживання
 
     for epoch in range(EPOCHS):
         print(f"Started {epoch} epoch...")
         cumulative_reward = 0
+        survival_time = 0  # Ініціалізація лічильника часу виживання
 
         # Initialize the environment and get it's state
         prev_observation = await env.reset()
@@ -95,6 +97,7 @@ async def train(env: GymEnv, agent: PPO):
 
             # Compute statistics
             cumulative_reward += reward.item()
+            survival_time += 1  # Оновлення лічильника часу виживання
 
             if steps_done % UPDATE_EVERY == 0:
                 agent.update()
@@ -109,6 +112,7 @@ async def train(env: GymEnv, agent: PPO):
 
         # Compute statistics
         cumulative_rewards.append(cumulative_reward)
+        survival_times.append(survival_time)  # Збереження часу виживання за епоху
     
     print("Drawing plot: reward distribution over epochs")
     epochs = range(1, EPOCHS + 1) 
@@ -119,6 +123,37 @@ async def train(env: GymEnv, agent: PPO):
     ax.set_ylabel('Cumulative reward')
     ax.xaxis.set_ticks(epochs)
     plt.savefig("agent_ppo_rewards.png")
+
+    # Plotting Average Survival Time
+    plt.plot(epochs, survival_times)
+    plt.title('Average Survival Time by epoch')
+    plt.xlabel('Epoch')
+    plt.ylabel('Survival Time (steps)')
+    plt.tight_layout()
+    plt.savefig("agent_ppo_training_metrics.png")
+
+    def plot_metrics(epochs, cumulative_rewards, survival_times):
+        fig, ax1 = plt.subplots(figsize=(10, 6))
+
+        color = 'tab:red'
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Cumulative Reward', color=color)
+        ax1.plot(epochs, cumulative_rewards, color=color)
+        ax1.tick_params(axis='y', labelcolor=color)
+
+        ax2 = ax1.twinx()  # Створює другу ось Y, яка поділяє ось X з ax1
+        color = 'tab:blue'
+        ax2.set_ylabel('Survival Time (steps)', color=color)  # Ми вже маємо мітку для осі X
+        ax2.plot(epochs, survival_times, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+
+        fig.tight_layout()  # Щоб запобігти нашаруванню і забезпечити чіткість міток
+        plt.title('Cumulative Reward and Survival Time by Epoch')
+        plt.savefig("combined_metrics.png")
+        plt.show()
+
+    # Припускаючи, що ви вже маєте epochs, cumulative_rewards, і survival_times
+    plot_metrics(epochs, cumulative_rewards, survival_times)
 
 
 async def main():
