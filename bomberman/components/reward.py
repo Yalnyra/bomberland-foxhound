@@ -148,9 +148,9 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
     if next_my_units_alive == 0:
         reward += (-1)
 
-    # 7. -0.01: the longer game the bigger punishment is
+    # 7. -0.001: the longer game the bigger punishment is
 
-    reward += (-0.01)
+    reward += (-0.001)
 
     # 8. -0.0666: the agent is in a cell within reach of a bomb
 
@@ -160,7 +160,7 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
     if not prev_within_reach_of_a_bomb and next_within_reach_of_a_bomb:
         reward += (-0.0666)
 
-    # 9. +0.2: the agent is in a safe cell when there is an active bomb nearby
+    # 9. +0.02: the agent is in a safe cell when there is an active bomb nearby
 
     prev_within_safe_cell_nearby_bomb = unit_within_safe_cell_nearby_bomb(prev_observation, current_unit_id)
     next_within_safe_cell_nearby_bomb = unit_within_safe_cell_nearby_bomb(next_observation, current_unit_id)
