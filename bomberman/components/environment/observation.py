@@ -1,6 +1,8 @@
 import numpy as np
+import torch
 from matplotlib import pyplot as plt
 from components.utils.metrics import manhattan_distance, broadcasting_distance
+
 
 def observation_from_state(state, my_unit_id):
     # get general variables
@@ -30,7 +32,7 @@ def observation_from_state(state, my_unit_id):
             tmp[cuy, cux, 0] = 0.5
             tmp[cuy, cux, 1] = float(max(0, unit['hp']))
             tmp[cuy, cux, 2] = float(max(0, unit['invulnerable'] - tick)) / 6.0
-            #tmp[cuy, cux, 3] = min(float(unit['inventory']['bombs']), 7)
+            # tmp[cuy, cux, 3] = min(float(unit['inventory']['bombs']), 7)
             tmp[cuy, cux, 3] = float(max(0, unit['stunned'] - tick)) / 6.0
             tmp[cuy, cux, 4] = min(float(unit['blast_diameter']) / 3.0, 7)
         layers.append((f'agent {agent} positions', tmp[:, :, 0], '01.0f'))
@@ -71,8 +73,12 @@ def observation_from_state(state, my_unit_id):
     for e in entities:
         if e['type'] != 'b': continue
         y, x = e['y'], e['x']
-    # Find all tiles with smaller distances from bombs than their blast ranges
-        layer = np.float32(broadcasting_distance([y, x], layer) < unit_state[e['owner_unit_id']]['blast_diameter'])
+        # Find all tiles with smaller distances from bombs than their blast ranges
+        if e.get('owner_unit_id') != None:
+            layer = np.float32(broadcasting_distance([y, x], layer)
+                               < unit_state[e['owner_unit_id']]['blast_diameter'])
+        else:
+            layer = np.float32(broadcasting_distance([y, x], layer) < 3)
     layers.append((f'entity {type} pos', layer, '01.0f'))
 
     # how long will that bomb or fire still remain?
@@ -112,4 +118,4 @@ def observation_from_state(state, my_unit_id):
         plt.imshow(l, cmap='gray')
     plt.show()
 
-    return np.array([v for n,v,f in layers], np.float32)
+    return torch.tensor(np.array([v for n, v, f in layers], np.float32)).flatten()

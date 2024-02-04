@@ -144,7 +144,7 @@ async def main():
     state = await env.reset()
     observation = observation_from_state(state, 'c')
     print(f"Observation Shape: {observation.shape} \n")
-    n_states = observation.shape[0]*observation.shape[1]
+    n_states = observation.shape[0]
     n_actions = action_dimensions()
     print(f"Agent: states = {n_states}, actions = {n_actions}")
 

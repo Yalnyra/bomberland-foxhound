@@ -39,8 +39,8 @@ class ActorCritic(nn.Module):
         # actor
         if has_continuous_action_space :
             self.actor = nn.Sequential(
-                            nn.Linear(15, state_dim),
-                            nn.Tanh(),
+                           # nn.Linear(15, state_dim),
+                           # nn.Tanh(),
                             nn.Linear(state_dim, 128),
                             nn.Tanh(),
                             nn.Linear(128, 64),
@@ -50,8 +50,8 @@ class ActorCritic(nn.Module):
                         )
         else:
             self.actor = nn.Sequential(
-                            nn.Linear(15, state_dim),
-                            nn.Tanh(),
+                           # nn.Linear(15, state_dim),
+                           # nn.Tanh(),
                             nn.Linear(state_dim, 128),
                             nn.Tanh(),
                             nn.Linear(128, 64),
@@ -61,8 +61,8 @@ class ActorCritic(nn.Module):
                         )
         # critic
         self.critic = nn.Sequential(
-                        nn.Linear(15, state_dim),
-                        nn.Tanh(),
+                       # nn.Linear(15, state_dim),
+                       # nn.Tanh(),
                         nn.Linear(state_dim, 128),
                         nn.Tanh(),
                         nn.Linear(128, 64),
@@ -168,7 +168,7 @@ class PPO:
         print("--------------------------------------------------------------------------------------------")
 
     def select_action(self, state):
-
+        #state = state.flatten().flatten()
         if self.has_continuous_action_space:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(device)
