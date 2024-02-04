@@ -27,8 +27,8 @@ State and action dimensions: HYBRID approach
 
 def map_dimensions(observation: Observation):
     width, height = (
-        observation['world']['width'], 
-        observation['world']['height']
+        observation.shape[1],
+        observation.shape[2]
     )
     return width, height
 

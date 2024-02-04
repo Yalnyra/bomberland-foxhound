@@ -9,6 +9,7 @@ from components.environment.config import (
     FWD_MODEL_URI,  
 )
 from components.environment.gym import Gym, GymEnv
+from components.environment.observation import observation_from_state
 from components.environment.mocks import MOCK_15x15_INITIAL_OBSERVATION
 from components.models.ppo import PPO
 from components.action import make_action
@@ -16,7 +17,7 @@ from components.reward import calculate_reward
 from components.state import (
     action_dimensions, 
     state_dimensions, 
-    observation_to_state
+    # component_to_state
 )
 from components.types import State
 
@@ -55,7 +56,6 @@ def select_action(agent: PPO, state: State, steps_done: int, verbose: bool = Tru
     
     if verbose:
         print(f"Agent: {agent_id}, Unit: {unit_id}")
-
     action = agent.select_action(state)
 
     return action, (agent_id, unit_id)
@@ -72,11 +72,12 @@ async def train(env: GymEnv, agent: PPO):
 
         # Initialize the environment and get it's state
         prev_observation = await env.reset()
-        prev_state = observation_to_state(prev_observation, current_agent_id='a', current_unit_id='c')
+        prev_state = observation_from_state(prev_observation, my_unit_id='c')
 
         # Iterate and gather experience
         for steps_done in range(1, STEPS):
             action, (agent_id, unit_id) = select_action(agent, prev_state, steps_done)
+            print("after")
             action_or_idle = make_action(prev_observation, agent_id, unit_id, action)
             action_is_idle = action_or_idle is None
 
@@ -86,7 +87,7 @@ async def train(env: GymEnv, agent: PPO):
                 next_observation, done, info = await env.step([action_or_idle])
 
             reward = calculate_reward(prev_observation, next_observation, current_agent_id=agent_id, current_unit_id=unit_id)
-            next_state = observation_to_state(next_observation, current_agent_id=agent_id, current_unit_id=unit_id)
+            next_state = observation_from_state(next_observation, my_unit_id=unit_id)
 
             # saving reward and is_terminals
             agent.buffer.rewards.append(reward)
@@ -175,8 +176,10 @@ async def main():
     print("============================================================================================")
     print("Initializing agent")
     env = gym.make("bomberland-gym", MOCK_15x15_INITIAL_OBSERVATION)
-    observation = await env.reset()
-    n_states = state_dimensions(observation)
+    state = await env.reset()
+    observation = observation_from_state(state, 'c')
+    print(f"Observation Shape: {observation.shape} \n")
+    n_states = observation.shape[0]
     n_actions = action_dimensions()
     print(f"Agent: states = {n_states}, actions = {n_actions}")
 
