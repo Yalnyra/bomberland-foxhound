@@ -1,7 +1,6 @@
 import numpy as np
-import components.utils.observation as utils
+from matplotlib import pyplot as plt
 from components.utils.metrics import manhattan_distance, broadcasting_distance
-from components.types import Observation
 
 def observation_from_state(state, my_unit_id):
     # get general variables
@@ -105,4 +104,12 @@ def observation_from_state(state, my_unit_id):
     sx, ex = max(0, view - cx), max(0, cx - view)
     sy, ey = max(0, view - cy), max(0, cy - view)
     layers = [(k, np.pad(v, [(sy, ey), (sx, ex)]), f) for (k, v, f) in layers]
-    return layers
+    plt.rcParams["figure.figsize"] = [18, 25]
+    # Build plot out of observation
+    for i, (n, l, f) in enumerate(layers):
+        plt.subplot(6, 5, 1 + i)
+        plt.title(n)
+        plt.imshow(l, cmap='gray')
+    plt.show()
+
+    return np.array([v for n,v,f in layers], np.float32)

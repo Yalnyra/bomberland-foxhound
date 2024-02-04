@@ -12,5 +12,5 @@ def broadcasting_distance(origin: Coordinate, map):
     m, n = map.shape
     return np.sqrt((np.arange(m)[:, None] - origin[0]) ** 2 + (np.arange(n) - origin[1]) ** 2)
 
-def engame_fire_sdf():
+def engame_fire_sdf ():
     pass

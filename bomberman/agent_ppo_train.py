@@ -9,6 +9,7 @@ from components.environment.config import (
     FWD_MODEL_URI,  
 )
 from components.environment.gym import Gym, GymEnv
+from components.environment.observation import observation_from_state
 from components.environment.mocks import MOCK_15x15_INITIAL_OBSERVATION
 from components.models.ppo import PPO
 from components.action import make_action
@@ -16,7 +17,7 @@ from components.reward import calculate_reward
 from components.state import (
     action_dimensions, 
     state_dimensions, 
-    observation_to_state
+    # component_to_state
 )
 from components.types import State
 
@@ -70,7 +71,7 @@ async def train(env: GymEnv, agent: PPO):
 
         # Initialize the environment and get it's state
         prev_observation = await env.reset()
-        prev_state = observation_to_state(prev_observation, current_agent_id='a', current_unit_id='c')
+        prev_state = observation_from_state(prev_observation, my_unit_id='c')
 
         # Iterate and gather experience
         for steps_done in range(1, STEPS):
@@ -84,7 +85,7 @@ async def train(env: GymEnv, agent: PPO):
                 next_observation, done, info = await env.step([action_or_idle])
 
             reward = calculate_reward(prev_observation, next_observation, current_agent_id=agent_id, current_unit_id=unit_id)
-            next_state = observation_to_state(next_observation, current_agent_id=agent_id, current_unit_id=unit_id)
+            next_state = observation_from_state(next_observation, my_unit_id=unit_id)
 
             # saving reward and is_terminals
             agent.buffer.rewards.append(reward)
