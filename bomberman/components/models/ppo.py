@@ -39,27 +39,33 @@ class ActorCritic(nn.Module):
         # actor
         if has_continuous_action_space :
             self.actor = nn.Sequential(
-                            nn.Linear(state_dim, 64),
+                            nn.Linear(15, state_dim),
                             nn.Tanh(),
-                            nn.Linear(64, 64),
+                            nn.Linear(state_dim, 128),
+                            nn.Tanh(),
+                            nn.Linear(128, 64),
                             nn.Tanh(),
                             nn.Linear(64, action_dim),
                             nn.Tanh()
                         )
         else:
             self.actor = nn.Sequential(
-                            nn.Linear(state_dim, 64),
+                            nn.Linear(15, state_dim),
                             nn.Tanh(),
-                            nn.Linear(64, 64),
+                            nn.Linear(state_dim, 128),
+                            nn.Tanh(),
+                            nn.Linear(128, 64),
                             nn.Tanh(),
                             nn.Linear(64, action_dim),
                             nn.Softmax(dim=-1)
                         )
         # critic
         self.critic = nn.Sequential(
-                        nn.Linear(state_dim, 64),
+                        nn.Linear(15, state_dim),
                         nn.Tanh(),
-                        nn.Linear(64, 64),
+                        nn.Linear(state_dim, 128),
+                        nn.Tanh(),
+                        nn.Linear(128, 64),
                         nn.Tanh(),
                         nn.Linear(64, 1)
                     )
@@ -177,13 +183,14 @@ class PPO:
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(device)
+                print(f"state shape: {state.shape}")
                 action, action_logprob, state_val = self.policy_old(state)
             
             self.buffer.states.append(state)
             self.buffer.actions.append(action)
             self.buffer.logprobs.append(action_logprob)
             self.buffer.state_values.append(state_val)
-
+            print(f"action shape: {action.shape}")
             return action.item()
 
     def update(self):

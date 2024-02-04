@@ -104,14 +104,14 @@ Reward function definition:
 def calculate_reward(prev_observation: Observation, next_observation: Observation, current_agent_id: str, current_unit_id: str):
     reward = 0        
 
-    # 1. +0.5: when dealing 1 hp for 1 enemy
+    # 1. +0.85: when dealing 1 hp for 1 enemy
 
     prev_enemy_units_hps = find_enemy_units_hps(prev_observation, current_agent_id)
     next_enemy_units_hps = find_enemy_units_hps(next_observation, current_agent_id)
     
     enemy_units_hps_diff = prev_enemy_units_hps - next_enemy_units_hps
     if enemy_units_hps_diff > 0:
-        reward += (enemy_units_hps_diff * 0.5)
+        reward += (enemy_units_hps_diff * 0.85)
 
     # 2. +1: when killing opponent
 
@@ -126,22 +126,22 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
     if next_enemy_units_alive == 0:
         reward += 1
 
-    # 4. -0.25: when losing 1 hp for 1 teammate
+    # 4. -0.5: when losing 1 hp for 1 teammate
 
     prev_my_units_hps = find_my_units_hps(prev_observation, current_agent_id)
     next_my_units_hps = find_my_units_hps(next_observation, current_agent_id)
 
     my_units_hps_diff = prev_my_units_hps - next_my_units_hps
     if my_units_hps_diff > 0:
-        reward += (my_units_hps_diff * -0.25)
+        reward += (my_units_hps_diff * -0.5)
 
-    # 5. -0.5: when losing teammate
+    # 5. -0.9: when losing teammate
 
     prev_my_units_alive = find_my_units_alive(prev_observation, current_agent_id)
     next_my_units_alive = find_my_units_alive(next_observation, current_agent_id)
 
     if next_my_units_alive < prev_my_units_alive:
-        reward += (-0.5)
+        reward += (-0.9)
 
     # 6. -1: when losing all 3 teammates
 
@@ -152,21 +152,21 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
 
     reward += (-0.01)
 
-    # 8. -0.000666: the agent is in a cell within reach of a bomb
+    # 8. -0.0666: the agent is in a cell within reach of a bomb
 
     prev_within_reach_of_a_bomb = unit_within_reach_of_a_bomb(prev_observation, current_unit_id)
     next_within_reach_of_a_bomb = unit_within_reach_of_a_bomb(next_observation, current_unit_id)
 
     if not prev_within_reach_of_a_bomb and next_within_reach_of_a_bomb:
-        reward += (-0.000666)
+        reward += (-0.0666)
 
-    # 9. +0.002: the agent is in a safe cell when there is an active bomb nearby
+    # 9. +0.2: the agent is in a safe cell when there is an active bomb nearby
 
     prev_within_safe_cell_nearby_bomb = unit_within_safe_cell_nearby_bomb(prev_observation, current_unit_id)
     next_within_safe_cell_nearby_bomb = unit_within_safe_cell_nearby_bomb(next_observation, current_unit_id)
 
     if not prev_within_safe_cell_nearby_bomb and next_within_safe_cell_nearby_bomb:
-        reward += 0.002
+        reward += 0.2
 
     # 10. +0.1: the unit activated bomb near an obstacle
 
