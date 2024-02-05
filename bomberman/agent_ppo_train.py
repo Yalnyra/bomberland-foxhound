@@ -1,10 +1,15 @@
 import torch
+import torch.nn as nn
 import numpy as np
 import asyncio
 import datetime
 import time
 import matplotlib.pyplot as plt
-
+import optuna
+from stable_baselines3.common.callbacks import EvalCallback
+from optuna.pruners import MedianPruner
+from optuna.samplers import TPESampler
+from optuna.visualization import plot_optimization_history, plot_param_importances
 from components.environment.config import (
     FWD_MODEL_CONNECTION_DELAY,
     FWD_MODEL_CONNECTION_RETRIES, 
@@ -32,17 +37,29 @@ UNITS = ["c", "d", "e", "f", "g", "h"]
 """
 Hyperparameters
 """
+N_TRIALS = 100  # Maximum number of trials
+N_JOBS = 1 # Number of jobs to run in parallel
+N_STARTUP_TRIALS = 10  # Stop random sampling after N_STARTUP_TRIALS
+N_EVALUATIONS = 3  # Number of evaluations during the training
+N_TIMESTEPS = int(2e3)  # Training budget
+EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
+N_EVAL_ENVS = 5
+N_EVAL_EPISODES = 10
+TIMEOUT = int(60 * 60)  # 15 minutes
 
 EPOCHS = 500
-STEPS = 10000
 BATCH_SIZE = 128
-LEARNING_RATE_ACTOR = 0.0003
-LEARNING_RATE_CRITIC = 0.001
-K_EPOCHS = 80  # update policy for K epochs in one PPO update
-GAMMA = 0.99
-TAU = 0.005
-EPS_CLIP = 0.2  # clip parameter for PPO
-ACTION_STD = 0.6
+DEFAULT_HYPERPARAMS = {
+"STEPS": 10000,
+"LEARNING_RATE_ACTOR": 0.0003,
+"LEARNING_RATE_CRITIC": 0.001,
+"K_EPOCHS": 80,  # update policy for K epochs in one PPO update
+"GAMMA": 0.99,
+"TAU": 0.005,
+"EPS_CLIP": 0.2,  # clip parameter for PPO
+"ACTION_STD": 0.6,
+"ACTIVATION_FN": nn.Tahn
+}
 HAS_CONTINUOUS_ACTION_SPACE = False
 PRINT_EVERY = 100
 UPDATE_EVERY = 100
@@ -80,6 +97,67 @@ def select_action(agent: PPO, state: State, steps_done: int, verbose: bool = Tru
     action = agent.select_action(state)
 
     return action, (agent_id, unit_id)
+
+def sample_ppo_params(trial: optuna.Trial):
+    BATCH_SIZE = trial.suggest_categorical("BATCH_SIZE", [8, 16, 32, 64, 128, 256, 512])
+    STEPS = 2 ** trial.suggest_int("STEPS", 3, 12)
+    LEARNING_RATE_ACTOR = trial.suggest_float("LEARNING_RATE_ACTOR", 1e-5, 1.0)
+    LEARNING_RATE_CRITIC = trial.suggest_float("LEARNING_RATE_CRITIC", 1e-3, 1.0),
+    GAMMA = 1.0 - trial.suggest_float("GAMMA", 0.0001, 0.1, log=True)
+    TAU =  trial.suggest_float("TAU", 1e-5, 0.1),
+    EPS_CLIP = trial.suggest_float("EPS_CLIP", 0.1, 0.4),  # clip parameter for PPO
+    NET_ARCH_TYPE = trial.suggest_categorical("net_arch", ["tiny", "small", "medium"])
+    ACTION_STD = trial.suggest_float("ACTION_STD", 0.01, 0.99)
+
+    activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU, "elu": nn.ELU, "leaky_relu": nn.LeakyReLU}[ACTIVATION_FN]
+
+
+class TrialEvalCallback(EvalCallback):
+    """
+    Callback used for evaluating and reporting a trial.
+
+    :param eval_env: Evaluation environement
+    :param trial: Optuna trial object
+    :param n_eval_episodes: Number of evaluation episodes
+    :param eval_freq:   Evaluate the agent every ``eval_freq`` call of the callback.
+    :param deterministic: Whether the evaluation should
+        use a stochastic or deterministic policy.
+    :param verbose:
+    """
+
+    def __init__(
+            self,
+            eval_env: gym.Env,
+            trial: optuna.Trial,
+            n_eval_episodes: int = 5,
+            eval_freq: int = 10000,
+            deterministic: bool = True,
+            verbose: int = 0,
+    ):
+
+        super().__init__(
+            eval_env=eval_env,
+            n_eval_episodes=n_eval_episodes,
+            eval_freq=eval_freq,
+            deterministic=deterministic,
+            verbose=verbose,
+        )
+        self.trial = trial
+        self.eval_idx = 0
+        self.is_pruned = False
+
+    def _on_step(self) -> bool:
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            # Evaluate policy (done in the parent class)
+            super()._on_step()
+            self.eval_idx += 1
+            # Send report to Optuna
+            self.trial.report(self.last_mean_reward, self.eval_idx)
+            # Prune trial if need
+            if self.trial.should_prune():
+                self.is_pruned = True
+                return False
+        return True
 
 
 async def train(env: GymEnv, agent: PPO):
