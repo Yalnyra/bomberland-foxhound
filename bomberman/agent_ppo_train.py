@@ -1,3 +1,5 @@
+import torch
+import numpy as np
 import asyncio
 import datetime
 import time
@@ -46,6 +48,25 @@ PRINT_EVERY = 100
 UPDATE_EVERY = 100
 SAVE_EVERY = 10000
 
+def softmax_action_selection(agent: PPO, state: State, steps_done: int, observation):
+    agent_id = AGENTS[steps_done % 2]
+    unit_id = UNITS[steps_done % 6]
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Перетворення стану на тензор PyTorch і використання моделі для отримання ймовірностей дій
+    state_tensor = torch.FloatTensor(state).to(device)
+    with torch.no_grad():
+        action_probs = agent.policy_old.actor(state_tensor)
+
+    # Використання np.random.choice для вибору дії на основі отриманих ймовірностей
+    action = np.random.choice(np.arange(action_probs.size(-1)), p=action_probs.numpy())
+
+    # Виклик make_action з отриманою дією
+    action_packet = make_action(observation, agent_id, unit_id, action)
+
+    return action_packet
+
 """
 Epsilon-greedy action selection.
 """
@@ -86,7 +107,8 @@ async def train(env: GymEnv, agent: PPO):
             else:
                 next_observation, done, info = await env.step([action_or_idle])
 
-            reward = calculate_reward(prev_observation, next_observation, current_agent_id=agent_id, current_unit_id=unit_id)
+            reward = calculate_reward(prev_observation, next_observation, current_agent_id=agent_id,
+                                      current_unit_id=unit_id, action_is_idle=action_is_idle)
             next_state = observation_from_state(next_observation, my_unit_id=unit_id)
 
             # saving reward and is_terminals

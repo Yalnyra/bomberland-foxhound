@@ -2,11 +2,12 @@ import torch
 
 from components.types import Observation
 from components.utils.observation import (
-    get_nearest_active_bomb, 
+    get_nearest_active_bomb,
     get_nearest_obstacle,
-    get_unit_activated_bombs, 
+    get_unit_activated_bombs,
 )
 from components.utils.metrics import manhattan_distance
+from components.utils.observation import guess_action_based_on_gamestate_change
 
 
 def find_my_units_alive(observation: Observation, current_agent_id: str) -> int:
@@ -120,9 +121,17 @@ def reward_for_bomb_enemy_ratio(observation: Observation, current_agent_id: str)
     return reward
 
 
+# 15: dropped action
+def is_action_drop(prev_observation: Observation, next_observation: Observation, action_is_idle: bool):
+    return (not action_is_idle) and \
+             guess_action_based_on_gamestate_change(prev_observation, next_observation) == 6
+
+
 """
 Bomb definition: {'created': 74, 'x': 11, 'y': 10, 'type': 'b', 'unit_id': 'd', 'agent_id': 'b', 'expires': 104, 'hp': 1, 'blast_diameter': 3}
 """
+
+
 def unit_activated_bomb_near_an_obstacle(observation: Observation, current_unit_id: str):
     unit_activated_bombs = get_unit_activated_bombs(observation, current_unit_id)
     if not len(unit_activated_bombs):
@@ -157,14 +166,17 @@ Reward function definition:
 13. -1: Negative reward for killing an agent by getting it stuck between level obstacles and sudden death border tiles
 14. +0.2: Positive multiplicative reward for a positive bomb/enemy losses ratio
 """
-def calculate_reward(prev_observation: Observation, next_observation: Observation, current_agent_id: str, current_unit_id: str):
-    reward = 0        
+
+
+def calculate_reward(prev_observation: Observation, next_observation: Observation, current_agent_id: str,
+                     current_unit_id: str, action_is_idle: bool = True):
+    reward = 0
 
     # 1. +0.85: when dealing 1 hp for 1 enemy
 
     prev_enemy_units_hps = find_enemy_units_hps(prev_observation, current_agent_id)
     next_enemy_units_hps = find_enemy_units_hps(next_observation, current_agent_id)
-    
+
     enemy_units_hps_diff = prev_enemy_units_hps - next_enemy_units_hps
     if enemy_units_hps_diff > 0:
         reward += (enemy_units_hps_diff * 0.85)
@@ -228,28 +240,24 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
 
     prev_activated_bomb_near_an_obstacle = unit_activated_bomb_near_an_obstacle(prev_observation, current_unit_id)
     next_activated_bomb_near_an_obstacle = unit_activated_bomb_near_an_obstacle(next_observation, current_unit_id)
-    
+
     if not prev_activated_bomb_near_an_obstacle and next_activated_bomb_near_an_obstacle:
         reward += 0.1
-
-    return torch.tensor(reward, dtype=torch.float32).reshape(1)
 
     # 11.
     reward += reward_for_maintaining_distance(next_observation, current_agent_id)
 
-    return torch.tensor(reward, dtype=torch.float32).reshape(1)
-
     # 12.
     reward += reward_for_friendly_fire(next_observation, current_agent_id)
-
-    return torch.tensor(reward, dtype=torch.float32).reshape(1)
 
     # 13.
     reward += reward_for_agent_stuck(next_observation, current_agent_id)
 
-    return torch.tensor(reward, dtype=torch.float32).reshape(1)
-
     # 14.
     reward += reward_for_bomb_enemy_ratio(next_observation, current_agent_id)
+
+    # 15
+    if is_action_drop(prev_observation, next_observation, action_is_idle):
+        reward -= 0.05
 
     return torch.tensor(reward, dtype=torch.float32).reshape(1)
