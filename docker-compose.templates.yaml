@@ -15,6 +15,13 @@ services:
         volumes:
             - ./bomberman:/app
 
+    load-replays:
+        build:
+            context: bomberman
+            dockerfile: Dockerfile.load_replays
+        volumes:
+            - ./bomberman:/app
+
     agent-dqn-train:
         build:
             context: bomberman

@@ -31,9 +31,13 @@ def observation_from_state(state, my_unit_id):
             cux, cuy = unit['coordinates']
             tmp[cuy, cux, 0] = 0.5
             tmp[cuy, cux, 1] = float(max(0, unit['hp']))
-            tmp[cuy, cux, 2] = float(max(0, unit['invulnerable'] - tick)) / 6.0
+            if unit.get('invulnerable') != None:
+                tmp[cuy, cux, 2] = float(max(0, unit['invulnerable'] - tick)) / 6.0
+            else:
+                tmp[cuy, cux, 2] = float(max(0, unit['invulnerability'] - tick)) / 6.0
             # tmp[cuy, cux, 3] = min(float(unit['inventory']['bombs']), 7)
-            tmp[cuy, cux, 3] = float(max(0, unit['stunned'] - tick)) / 6.0
+            if unit.get('stunned') != None:
+                tmp[cuy, cux, 3] = float(max(0, unit['stunned'] - tick)) / 6.0
             tmp[cuy, cux, 4] = min(float(unit['blast_diameter']) / 3.0, 7)
         layers.append((f'agent {agent} positions', tmp[:, :, 0], '01.0f'))
         layers.append((f'agent {agent} HP', tmp[:, :, 1], '01.0f'))
@@ -76,9 +80,9 @@ def observation_from_state(state, my_unit_id):
         # Find all tiles with smaller distances from bombs than their blast ranges
         if e.get('owner_unit_id') != None:
             layer = np.float32(broadcasting_distance([y, x], layer)
-                               < unit_state[e['owner_unit_id']]['blast_diameter'])
+                               <= unit_state[e['owner_unit_id']]['blast_diameter'])
         else:
-            layer = np.float32(broadcasting_distance([y, x], layer) < 3)
+            layer = np.float32(broadcasting_distance([y, x], layer) <= 3)
     layers.append((f'entity {type} pos', layer, '01.0f'))
 
     # how long will that bomb or fire still remain?

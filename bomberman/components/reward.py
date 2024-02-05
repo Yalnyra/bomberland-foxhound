@@ -72,13 +72,12 @@ def unit_within_safe_cell_nearby_bomb(observation: Observation, current_unit_id:
 
 
 # 11: Positive reward for maintaining distance with 2 or more agents:
-def reward_for_maintaining_distance(observation: Observation, current_agent_id: str):
+def reward_for_maintaining_distance(observation: Observation, current_agent_id: str, current_unit_id: str):
     reward = 0
-    agent_coords = observation['unit_state'][current_agent_id]['coordinates']
-
+    unit_coords = observation['unit_state'][current_unit_id]['coordinates']
     for unit_id, unit_props in observation['unit_state'].items():
         if unit_props['agent_id'] != current_agent_id and unit_props['hp'] > 0:
-            distance = manhattan_distance(agent_coords, unit_props['coordinates'])
+            distance = manhattan_distance(unit_coords, unit_props['coordinates'])
             if distance >= 2:
                 reward += 0.1  # Приклад значення, можна налаштувати
     return reward
@@ -88,31 +87,38 @@ def reward_for_maintaining_distance(observation: Observation, current_agent_id: 
 # multiplied by the casualty ratio created by one bomb:
 def reward_for_friendly_fire(observation: Observation, current_agent_id: str):
     reward = 0
-
+    units = ['c', 'e', 'g'] if current_agent_id == 'a' else ['d', 'f', 'h']
     # Перевіряємо, чи агент активував свою бомбу та завдав шкоди своїм товаришам
-    if current_agent_id in observation['bombs']:
-        bomb = observation['bombs'][current_agent_id]
-        if bomb['hp'] < 0:
-            casualties = abs(bomb['hp'])
-            reward -= casualties * 0.5  # Приклад значення, можна налаштувати
+    for e in observation['entities']:
+        if e['type'] != 'x': continue
+        if e.get('owner_unit_id') in units or e.get('unit_id') in units:
+            for unit in units:
+                u_x, u_y = observation['unit_state'][unit]['coordinates']
+                x, y = e['x'], e['y']
+                if u_x == x and u_y == y:
+                    reward -= 1 / (find_my_units_alive(observation, current_agent_id) + 0.1)  # Приклад значення, можна налаштувати
     return reward
 
 
 # 13: Negative reward for killing an agent by getting it stuck between level obstacles and sudden death border tiles:
-def reward_for_agent_stuck(observation: Observation, current_agent_id: str):
+def reward_for_agent_stuck(observation: Observation, current_unit_id: str):
     reward = 0
-    agent_coords = observation['unit_state'][current_agent_id]['coordinates']
-
-    if observation['field'][agent_coords[0]][agent_coords[1]] == 'o':
-        reward -= 1  # Приклад значення, можна налаштувати
+    u_x, u_y = observation['unit_state'][current_unit_id]['coordinates']
+    for e in observation['entities']:
+        type = e['type']
+        x, y = e['x'], e['y']
+        if type in ['m', 'o', 'w']:
+            if u_x == x and u_y == y:
+                reward -= 1  # Приклад значення, можна налаштувати
     return reward
 
 
 # 14: Positive multiplicative reward for a positive bomb/enemy losses' ratio:
-def reward_for_bomb_enemy_ratio(observation: Observation, current_agent_id: str):
+def reward_for_bomb_enemy_ratio(prev_observation: Observation, next_observation: Observation,
+                                current_agent_id: str):
     reward = 0
 
-    prev_enemy_units_alive = find_enemy_units_alive(observation, current_agent_id)
+    prev_enemy_units_alive = find_enemy_units_alive(prev_observation, current_agent_id)
     next_enemy_units_alive = find_enemy_units_alive(next_observation, current_agent_id)
 
     bomb_ratio = (prev_enemy_units_alive - next_enemy_units_alive) / 2  # Приклад формули, можна налаштувати
@@ -245,16 +251,16 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
         reward += 0.1
 
     # 11.
-    reward += reward_for_maintaining_distance(next_observation, current_agent_id)
+    reward += reward_for_maintaining_distance(next_observation, current_agent_id, current_unit_id)
 
     # 12.
     reward += reward_for_friendly_fire(next_observation, current_agent_id)
 
     # 13.
-    reward += reward_for_agent_stuck(next_observation, current_agent_id)
+    reward += reward_for_agent_stuck(next_observation, current_unit_id)
 
     # 14.
-    reward += reward_for_bomb_enemy_ratio(next_observation, current_agent_id)
+    reward += reward_for_bomb_enemy_ratio(prev_observation, next_observation, current_agent_id)
 
     # 15
     if is_action_drop(prev_observation, next_observation, action_is_idle):
