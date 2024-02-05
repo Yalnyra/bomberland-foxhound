@@ -263,7 +263,7 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
     reward += reward_for_bomb_enemy_ratio(prev_observation, next_observation, current_agent_id)
 
     # 15
-    if is_action_drop(prev_observation, next_observation, action_is_idle):
+    if is_action_drop(prev_observation, next_observation, current_unit_id, action_is_idle):
         reward -= 0.05
 
     return torch.tensor(reward, dtype=torch.float32).reshape(1)
