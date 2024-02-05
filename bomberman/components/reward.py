@@ -128,9 +128,9 @@ def reward_for_bomb_enemy_ratio(prev_observation: Observation, next_observation:
 
 
 # 15: dropped action
-def is_action_drop(prev_observation: Observation, next_observation: Observation, action_is_idle: bool):
+def is_action_drop(prev_observation: Observation, next_observation: Observation, unit_id, action_is_idle: bool):
     return (not action_is_idle) and \
-             guess_action_based_on_gamestate_change(prev_observation, next_observation) == 6
+             guess_action_based_on_gamestate_change(prev_observation, next_observation, unit_id) == 6
 
 
 """
@@ -263,7 +263,7 @@ def calculate_reward(prev_observation: Observation, next_observation: Observatio
     reward += reward_for_bomb_enemy_ratio(prev_observation, next_observation, current_agent_id)
 
     # 15
-    if is_action_drop(prev_observation, next_observation, action_is_idle):
+    if is_action_drop(prev_observation, next_observation, current_unit_id, action_is_idle):
         reward -= 0.05
 
     return torch.tensor(reward, dtype=torch.float32).reshape(1)
